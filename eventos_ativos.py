@@ -14,4 +14,5 @@ def eventos_ativos():
             else:
                 print(str(s).ljust(18), end='\n')
 
+
 eventos_ativos()
