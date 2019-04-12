@@ -4,14 +4,11 @@ c = connection.cursor()
 
 
 def create_evento(nome):
-    c.execute('CREATE TABLE %s (id_equipamento integer not null unique, '
+    c.execute(f'CREATE TABLE {nome} (id_equipamento integer not null primary key autoincrement unique, '
               'numero_equipamento integer not null, '
               'modelo_equipamento text not null, '
               'tipo_equipamento text not null, '
-              'foreign key(id_equipamento) references equipamento (id), '
-              'foreign key(numero_equipamento) references equipamento (numero), '
-              'foreign key(modelo_equipamento) references equipamento (modelo), '
-              'foreign key(tipo_equipamento) references equipamento (tipo))' % nome)
+              'status_equipamento text not null default "Evento")')
 
 
 def inserir_evento(nome, data, data_saida, data_entrada):
@@ -28,12 +25,43 @@ def inserir_evento(nome, data, data_saida, data_entrada):
     connection.commit()
 
 
+def inserir_hist_evento():
+    c.execute(f'INSERT INTO historico_evento SELECT * FROM evento')
+    connection.commit()
+
+
+def ver_equipamento_galpao():
+    select = f'SELECT * FROM equipamento WHERE status = "Galpão"'
+    print('ID'.ljust(18), 'Modelo'.ljust(16), 'N°'.ljust(20), 'Tipo'.ljust(14), 'Status'.ljust(16))
+    for row in c.execute(select):
+        for i, s in enumerate(row):
+            if i <= 3:
+                print(str(s).ljust(18), end='')
+            else:
+                print(str(s).ljust(18), end='\n')
+
+
 def inserir_equip_evento(nome, id):
+    nome_lista = ['"', nome, '"']
+    nome_sql = nome_lista[0] + nome_lista[1] + nome_lista[2]
     c.execute(f'INSERT INTO {nome} SELECT * FROM equipamento WHERE id = {id}')
+    c.execute(f'UPDATE equipamento SET status = {nome_sql} WHERE id = {id}')
+    connection.commit()
+
+
+def ver_equipamento():
+    select = f'SELECT * FROM equipamento'
+    print('ID'.ljust(18), 'Modelo'.ljust(16), 'N°'.ljust(20), 'Tipo'.ljust(14), 'Status'.ljust(16))
+    for row in c.execute(select):
+        for i, s in enumerate(row):
+            if i <= 3:
+                print(str(s).ljust(18), end='')
+            else:
+                print(str(s).ljust(18), end='\n')
 
 
 def historico_eventos():
-    select = 'SELECT * FROM evento'
+    select = 'SELECT * FROM historico_evento'
     print('ID'.ljust(19), 'Nome'.ljust(18), 'Data'.ljust(13), 'Data de Saída'.ljust(16), 'Data de Entrada')
     for row in c.execute(select):
         for i, s in enumerate(row):
@@ -43,23 +71,26 @@ def historico_eventos():
                 print(str(s).ljust(18), end='\n')
 
 
-def delete_evento(nome_evento):
-    c.execute('DROP TABLE %s'% nome_evento)
+def delete_evento(nome):
+    nome_lista = ['"', nome, '"']
+    nome_sql = nome_lista[0] + nome_lista[1] + nome_lista[2]
+    c.execute(f'DROP TABLE {nome_sql}')
+    c.execute(f'DELETE FROM evento WHERE nome = {nome_sql}')
+    connection.commit()
 
 
 def ver_evento(nome):
-    print(nome)
-    select = f'SELECT * FROM {nome}'
+    select = f'SELECT id, modelo, numero, tipo FROM {nome} WHERE id = 2'
     for row in c.execute(select):
         print(row)
 
 
-def registrar_equipamento(numero, modelo, tipo):
+def registrar_equipamento(modelo, numero, tipo):
     modelo_lista = ['"', modelo, '"']
     modelo_sql = modelo_lista[0] + modelo_lista[1] + modelo_lista[2]
     tipo_lista = ['"', tipo, '"']
     tipo_sql = tipo_lista[0] + tipo_lista[1] + tipo_lista[2]
-    c.execute(f'INSERT INTO equipamento (numero, modelo, tipo) VALUES({numero}, {modelo_sql}, {tipo_sql})')
+    c.execute(f'INSERT INTO equipamento (modelo, numero, tipo) VALUES({modelo_sql}, {numero}, {tipo_sql})')
     connection.commit()
 
 
@@ -80,6 +111,8 @@ def menu_principal():
 
     opcao = int(input('Selecione uma opção: '))
     if opcao == 1:
+        #nome = str(input('Digite o nome do evento: '))
+        #create_evento(nome)
         while True:
             nome = str(input('Digite o nome do evento: '))
             try:
@@ -91,10 +124,12 @@ def menu_principal():
         inserir_evento(nome, str(input('Digite a data do evento: [dd/mm/yyyy]')),
                        str(input('Digite a data de saída do galpão: [dd/mm/yyyy] ')),
                        str(input('Digite a data da volta para o galpão: [dd/mm/yyyy]')))
+        inserir_hist_evento()
     elif opcao == 2:
         while True:
+            nome = str(input('Digite o nome do evento: '))
             try:
-                delete_evento(str(input('Digite o nome do evento: ')))
+                delete_evento(nome)
                 break
             except:
                 print('ESTE EVENTO JÁ FOI FECHADO!')
@@ -107,9 +142,27 @@ def menu_principal():
             except:
                 print('EVENTO INVÁLIDO!')
     elif opcao == 4:
-        print('oi')
+        ver_equipamento_galpao()
+        nome = str(input('Digite o nome do evento: '))
+        id = int(input('Selecione o equipamento: '))
+        inserir_equip_evento(nome, id)
+
+
+
+    elif opcao == 5:
+        ver_equipamento()
     elif opcao == 6:
         historico_eventos()
+    elif opcao == 7:
+        while True:
+            modelo = str(input('Digite o modelo do equipamento: '))
+            numero = int(input('Digite o número do equipamento: '))
+            tipo = str(input('Digite o tipo do equipamento: '))
+            try:
+                registrar_equipamento(modelo, numero, tipo)
+                break
+            except:
+                print('ESTE EQUIPAMENTO JÁ FOI REGISTRADO!')
 
 
 title('menu')
